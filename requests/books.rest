@@ -1,0 +1,45 @@
+GET http://localhost:3001/api/books
+
+### delete one book
+DELETE http://localhost:3001/api/books/6a270fa12ee0b4838d84276f
+
+###
+
+POST http://localhost:3001/api/books HTTP/1.1
+Content-Type: application/json
+
+{
+    "title": "The Great Gatsby",
+    "author": "F. Scott Fitzgerald",
+    "isbn": "9780743273565",
+    "category": "Classic",
+    "description": "A novel about wealth, love, and the American Dream in the 1920s.",
+    "copies": 5
+}
+
+
+###
+POST http://localhost:3001/api/books HTTP/1.1
+Content-Type: application/json
+
+{
+    "title": "To Kill a Mockingbird",
+    "author": "Harper Lee",
+    "isbn": "9780061120084",
+    "category": "Fiction",
+    "description": "A story of racial injustice and moral growth in the American South.",
+    "copies": 8
+}
+
+###
+POST http://localhost:3001/api/books HTTP/1.1
+Content-Type: application/json
+
+{
+    "title": "1984",
+    "author": "George Orwell",
+    "isbn": "9780451524935",
+    "category": "Dystopian",
+    "description": "A chilling depiction of a totalitarian society under constant surveillance.",
+    "copies": 12
+}

@@ -1,5 +1,7 @@
 const express = require('express')
 const cors = require('cors')
+const Book = require('./models/book')
+
 const app = express()
 app.use(express.json())
 app.use(cors())
@@ -79,36 +81,37 @@ app.get('/info', (req, res) => {
 })
 
 app.get('/api/books', (req, res) => {
-  res.json(books)
+  Book.find({}).then(books => {
+    res.json(books)
+  })
 })
 
 app.get('/api/books/:id', (req, res) => {
-  const id = req.params.id
-  const book = books.find((book) => book._id === id)
-  if (book) {
+  Book.findById(req.params.id).then(book => {
     res.json(book)
-  } else {
-    res.status(404).end()
-  }
+  })
 })
 
 app.post('/api/books', (req, res) => {
-  let book = req.body
-  if (!book) {
+  console.log(req.body)
+  let body = req.body
+  if (!body) {
     return res.status(400).json({ error: 'missing body' })
   }
-  const maxId =
-    books.length > 0 ? Math.max(...books.map((b) => Number(b._id))) : 0
 
-  book = { ...book, _id: String(maxId + 1) }
-  books = books.concat(book)
-  res.json(book)
+  const book = new Book({
+    ...body
+  })
+
+  book.save().then(savedBook => {
+    res.json(savedBook)
+  })
 })
 
 app.delete('/api/books/:id', (req, res) => {
-  const id = req.params.id
-  books = books.filter((book) => book.id !== id)
-  res.status(204).end()
+  Book.findByIdAndDelete(req.params.id).then(result => {
+    res.json({message: `deleted ${req.params.id}`}).status(204)
+  })
 })
 
 app.put('/api/books/:id', (req, res) => {
