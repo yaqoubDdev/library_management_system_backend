@@ -1,4 +1,4 @@
-GET http://localhost:3001/api/books
+GET http://localhost:3001/api/books/
 
 ### delete one book
 DELETE http://localhost:3001/api/books/6a270fa12ee0b4838d84276f
@@ -33,6 +33,18 @@ Content-Type: application/json
 
 ###
 POST http://localhost:3001/api/books HTTP/1.1
+Content-Type: application/json
+
+{
+    "author": "George Orwell",
+    "isbn": "9780451524935",
+    "category": "Dystopian",
+    "description": "A chilling depiction of a totalitarian society under constant surveillance.",
+    "copies": 12
+}
+
+###
+PUT http://localhost:3001/api/books/6a271de95481eb7c432f1cb2 HTTP/1.1
 Content-Type: application/json
 
 {
