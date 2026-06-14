@@ -15,7 +15,7 @@ app.use(cors())
 
 app.use(express.static('public'))
 
-logger.info('Connecting to:', config.MONGODB_URI)
+logger.info('Connecting to MongoDB...')
 
 mongoose
   .connect(config.MONGODB_URI, { family: 4 })
