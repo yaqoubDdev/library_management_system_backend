@@ -16,6 +16,10 @@ const borrowRecordSchema = new mongoose.Schema({
     default: Date.now,
     required: true
   },
+  dueDate: {
+    type: Date,
+    required: true
+  },
   returnedAt: {
     type: Date
   },
@@ -24,6 +28,26 @@ const borrowRecordSchema = new mongoose.Schema({
     enum: ['borrowed', 'returned'],
     default: 'borrowed',
     required: true
+  },
+  fineAmount: {
+    type: Number,
+    default: 0
+  },
+  finePaid: {
+    type: Boolean,
+    default: false
+  },
+  extensionRequested: {
+    type: Boolean,
+    default: false
+  },
+  extensionApproved: {
+    type: Boolean,
+    default: false
+  },
+  extensionDays: {
+    type: Number,
+    default: 0
   }
 })
 

@@ -117,9 +117,13 @@ booksRouter.post('/:id/borrow', middleware.userExtractor, (req, res, next) => {
             return res.status(400).json({ error: 'you have already borrowed this book' })
           }
 
+          const dueDate = new Date()
+          dueDate.setDate(dueDate.getDate() + 14) // 14 days to return
+
           const record = new BorrowRecord({
             book: bookId,
-            user: user._id
+            user: user._id,
+            dueDate
           })
 
           record.save()
@@ -159,8 +163,16 @@ booksRouter.post('/:id/return', middleware.userExtractor, (req, res, next) => {
             return res.status(400).json({ error: 'you have not borrowed this book' })
           }
 
+          const now = new Date()
           record.status = 'returned'
-          record.returnedAt = new Date()
+          record.returnedAt = now
+
+          // Calculate fine: SLL 5 per day overdue
+          if (now > record.dueDate) {
+            const msPerDay = 1000 * 60 * 60 * 24
+            const daysOverdue = Math.ceil((now - record.dueDate) / msPerDay)
+            record.fineAmount = daysOverdue * 5
+          }
 
           record.save()
             .then(() => {
