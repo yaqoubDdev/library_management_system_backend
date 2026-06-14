@@ -159,6 +159,84 @@ test('adding book fails with 403 if user is not admin', async () => {
     .expect(403)
 })
 
+test('an authenticated user can borrow a book successfully', async () => {
+  const booksResponse = await api.get('/api/books')
+  const book = booksResponse.body[0]
+  const initialCopies = book.copies
+
+  const borrowResponse = await api
+    .post(`/api/books/${book.id}/borrow`)
+    .set('Authorization', `Bearer ${nonAdminToken}`)
+    .expect(200)
+
+  assert.strictEqual(borrowResponse.body.book.copies, initialCopies - 1)
+  assert.strictEqual(borrowResponse.body.message, 'book borrowed successfully')
+
+  // Check borrow status
+  const statusResponse = await api
+    .get(`/api/books/${book.id}/borrow-status`)
+    .set('Authorization', `Bearer ${nonAdminToken}`)
+    .expect(200)
+
+  assert.strictEqual(statusResponse.body.borrowed, true)
+})
+
+test('user cannot borrow the same book twice simultaneously', async () => {
+  const booksResponse = await api.get('/api/books')
+  const book = booksResponse.body[0]
+
+  // First borrow
+  await api
+    .post(`/api/books/${book.id}/borrow`)
+    .set('Authorization', `Bearer ${nonAdminToken}`)
+    .expect(200)
+
+  // Second borrow should fail
+  await api
+    .post(`/api/books/${book.id}/borrow`)
+    .set('Authorization', `Bearer ${nonAdminToken}`)
+    .expect(400)
+})
+
+test('user can return a borrowed book successfully', async () => {
+  const booksResponse = await api.get('/api/books')
+  const book = booksResponse.body[0]
+  const initialCopies = book.copies
+
+  // Borrow
+  await api
+    .post(`/api/books/${book.id}/borrow`)
+    .set('Authorization', `Bearer ${nonAdminToken}`)
+    .expect(200)
+
+  // Return
+  const returnResponse = await api
+    .post(`/api/books/${book.id}/return`)
+    .set('Authorization', `Bearer ${nonAdminToken}`)
+    .expect(200)
+
+  assert.strictEqual(returnResponse.body.book.copies, initialCopies)
+  assert.strictEqual(returnResponse.body.message, 'book returned successfully')
+
+  // Check status
+  const statusResponse = await api
+    .get(`/api/books/${book.id}/borrow-status`)
+    .set('Authorization', `Bearer ${nonAdminToken}`)
+    .expect(200)
+
+  assert.strictEqual(statusResponse.body.borrowed, false)
+})
+
+test('user cannot return a book they have not borrowed', async () => {
+  const booksResponse = await api.get('/api/books')
+  const book = booksResponse.body[0]
+
+  await api
+    .post(`/api/books/${book.id}/return`)
+    .set('Authorization', `Bearer ${nonAdminToken}`)
+    .expect(400)
+})
+
 after(async () => {
   await mongoose.connection.close()
 })
