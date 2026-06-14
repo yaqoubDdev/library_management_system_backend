@@ -28,6 +28,14 @@ const initialBooks = [
     category: 'Tech',
     description: 'A book about CSS',
     copies: 3
+  },
+  {
+    title: 'JavaScript fundamentals',
+    author: 'John Doe',
+    isbn: '5555555555',
+    category: 'Programming',
+    description: 'Learn JS',
+    copies: 7
   }
 ]
 
@@ -35,7 +43,6 @@ beforeEach(async () => {
   await Book.deleteMany({})
   await User.deleteMany({})
 
-  // Create admin user
   const adminPasswordHash = await bcrypt.hash('secret', 10)
   const adminUser = new User({
     username: 'admin',
@@ -45,7 +52,6 @@ beforeEach(async () => {
   })
   await adminUser.save()
 
-  // Create normal user
   const userPasswordHash = await bcrypt.hash('secret', 10)
   const normalUser = new User({
     username: 'user',
@@ -55,41 +61,76 @@ beforeEach(async () => {
   })
   await normalUser.save()
 
-  // Login admin to get token
   const adminLoginResponse = await api
     .post('/api/login')
     .send({ username: 'admin', password: 'secret' })
   token = adminLoginResponse.body.token
 
-  // Login normal user to get token
   const userLoginResponse = await api
     .post('/api/login')
     .send({ username: 'user', password: 'secret' })
   nonAdminToken = userLoginResponse.body.token
 
-  // Seed books
-  let bookObject = new Book(initialBooks[0])
-  await bookObject.save()
-  bookObject = new Book(initialBooks[1])
-  await bookObject.save()
+  for (const book of initialBooks) {
+    const bookObject = new Book(book)
+    await bookObject.save()
+  }
 })
 
 test('books are returned as json', async () => {
-  await api
+  const res = await api
     .get('/api/books')
     .expect(200)
     .expect('Content-Type', /application\/json/)
+  assert.ok(Array.isArray(res.body.data))
 })
 
-test('all books are returned', async () => {
+test('all books are returned with pagination metadata', async () => {
   const response = await api.get('/api/books')
-  assert.strictEqual(response.body.length, initialBooks.length)
+  assert.strictEqual(response.body.total, initialBooks.length)
+  assert.strictEqual(response.body.page, 1)
+  assert.strictEqual(response.body.pages, 1)
+  assert.strictEqual(response.body.data.length, initialBooks.length)
 })
 
 test('a specific book is within the returned books', async () => {
   const response = await api.get('/api/books')
-  const titles = response.body.map(r => r.title)
+  const titles = response.body.data.map(r => r.title)
   assert(titles.includes('HTML is easy'))
+})
+
+test('paginates with limit parameter', async () => {
+  const response = await api.get('/api/books?limit=2')
+  assert.strictEqual(response.body.total, initialBooks.length)
+  assert.strictEqual(response.body.data.length, 2)
+  assert.strictEqual(response.body.page, 1)
+  assert.strictEqual(response.body.pages, 2)
+})
+
+test('paginates with page parameter', async () => {
+  const response = await api.get('/api/books?limit=2&page=2')
+  assert.strictEqual(response.body.total, initialBooks.length)
+  assert.strictEqual(response.body.data.length, 1)
+  assert.strictEqual(response.body.page, 2)
+  assert.strictEqual(response.body.pages, 2)
+})
+
+test('search by title', async () => {
+  const response = await api.get('/api/books?search=HTML')
+  assert.strictEqual(response.body.total, 1)
+  assert.strictEqual(response.body.data[0].title, 'HTML is easy')
+})
+
+test('search by author', async () => {
+  const response = await api.get('/api/books?search=Jane')
+  assert.strictEqual(response.body.total, 1)
+  assert.strictEqual(response.body.data[0].author, 'Jane Doe')
+})
+
+test('filter by category', async () => {
+  const response = await api.get('/api/books?category=Programming')
+  assert.strictEqual(response.body.total, 1)
+  assert.strictEqual(response.body.data[0].category, 'Programming')
 })
 
 test('a valid book can be added by an admin', async () => {
@@ -110,9 +151,9 @@ test('a valid book can be added by an admin', async () => {
     .expect('Content-Type', /application\/json/)
 
   const response = await api.get('/api/books')
-  const titles = response.body.map(r => r.title)
+  const titles = response.body.data.map(r => r.title)
 
-  assert.strictEqual(response.body.length, initialBooks.length + 1)
+  assert.strictEqual(response.body.total, initialBooks.length + 1)
   assert(titles.includes('Async/Await is awesome'))
 })
 
@@ -129,7 +170,7 @@ test('book without title is not added by admin', async () => {
     .expect(400)
 
   const response = await api.get('/api/books')
-  assert.strictEqual(response.body.length, initialBooks.length)
+  assert.strictEqual(response.body.total, initialBooks.length)
 })
 
 test('adding book fails with 401 if token is not provided', async () => {
@@ -162,4 +203,3 @@ test('adding book fails with 403 if user is not admin', async () => {
 after(async () => {
   await mongoose.connection.close()
 })
-
