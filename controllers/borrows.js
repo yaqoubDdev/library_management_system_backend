@@ -156,4 +156,20 @@ borrowsRouter.post('/:id/deny-extension', middleware.userExtractor, (req, res, n
     .catch((error) => next(error))
 })
 
+// ─── ADMIN: Get borrow records for a specific user ────────────────────────────
+borrowsRouter.get('/user/:userId', middleware.userExtractor, (req, res, next) => {
+  const user = req.user
+  if (!user) return res.status(401).json({ error: 'token missing or invalid' })
+  if (user.role !== 'admin') return res.status(403).json({ error: 'admin access only' })
+
+  BorrowRecord.find({ user: req.params.userId })
+    .populate('book', 'title author isbn category copies')
+    .populate('user', 'username name')
+    .sort({ borrowedAt: -1 })
+    .then((records) => {
+      res.json(records)
+    })
+    .catch((error) => next(error))
+})
+
 module.exports = borrowsRouter

@@ -1,0 +1,309 @@
+/* Books Page */
+.books-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.books-page h1 {
+  font-size: 1.8rem;
+  color: var(--navy);
+  margin-bottom: 1.5rem;
+}
+
+.books-page h1 span {
+  color: var(--gold);
+}
+
+/* Search & Filter */
+.books-toolbar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.books-toolbar input,
+.books-toolbar select {
+  padding: 0.7rem 1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.books-toolbar input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.books-toolbar input:focus,
+.books-toolbar select:focus {
+  border-color: var(--gold);
+}
+
+/* Book Details */
+.book-details-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.book-detail {
+  display: flex;
+  gap: 2.5rem;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 2rem;
+  flex-wrap: wrap;
+}
+
+.book-detail .book-cover {
+  flex: 0 0 300px;
+}
+
+.book-detail .book-cover img {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.book-detail .book-info {
+  flex: 1;
+  min-width: 280px;
+}
+
+.book-detail .book-info h1 {
+  font-size: 1.8rem;
+  color: var(--navy);
+  margin-bottom: 0.3rem;
+}
+
+.book-detail .book-info .author {
+  font-size: 1.1rem;
+  color: var(--gray);
+  margin-bottom: 1rem;
+}
+
+.book-detail .book-info .meta {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.book-detail .book-info .meta span {
+  font-size: 0.9rem;
+  color: var(--gray);
+}
+
+.book-detail .book-info .meta span strong {
+  color: var(--navy);
+}
+
+.book-detail .book-info .description {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #555;
+  margin-bottom: 1.5rem;
+}
+
+.availability {
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.available {
+  color: var(--success);
+}
+
+.unavailable {
+  color: var(--danger);
+}
+
+/* Borrowed Books */
+.borrowed-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.borrowed-page h1 {
+  font-size: 1.8rem;
+  color: var(--navy);
+  margin-bottom: 1.5rem;
+}
+
+.borrowed-page h1 span {
+  color: var(--gold);
+}
+
+.borrowed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.borrow-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.2rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.borrow-card .borrow-info h4 {
+  font-size: 1.05rem;
+  color: var(--navy);
+}
+
+.borrow-card .borrow-info p {
+  font-size: 0.85rem;
+  color: var(--gray);
+}
+
+.borrow-card .borrow-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Admin Books */
+.admin-books-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.admin-books-page h1 {
+  font-size: 1.8rem;
+  color: var(--navy);
+  margin-bottom: 1.5rem;
+}
+
+.admin-books-page h1 span {
+  color: var(--gold);
+}
+
+.admin-books-page .add-btn {
+  margin-bottom: 1.5rem;
+}
+
+.admin-table-wrapper {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--white);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.admin-table th {
+  background: var(--navy);
+  color: var(--white);
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.admin-table td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tr:hover td {
+  background: #f9f9f9;
+}
+
+.admin-table td img {
+  width: 50px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.admin-table .actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-table .actions .btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+/* Forms (Add/Edit) */
+.form-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.form-page h1 {
+  font-size: 1.8rem;
+  color: var(--navy);
+  margin-bottom: 1.5rem;
+}
+
+.form-page h1 span {
+  color: var(--gold);
+}
+
+.form-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 2rem;
+}
+
+.form-card textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+@media (max-width: 768px) {
+  .book-detail {
+    flex-direction: column;
+  }
+
+  .book-detail .book-cover {
+    flex: 0 0 auto;
+  }
+
+  .book-detail .book-cover img {
+    height: 300px;
+  }
+
+  .books-toolbar {
+    flex-direction: column;
+  }
+
+  .borrow-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-table td,
+  .admin-table th {
+    padding: 0.6rem;
+    font-size: 0.8rem;
+  }
+}
