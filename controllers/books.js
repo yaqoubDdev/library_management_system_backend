@@ -1,5 +1,6 @@
 const booksRouter = require('express').Router()
 const Book = require('../models/book')
+const middleware = require('../utils/middleware')
 
 booksRouter.get('/', (req, res) => {
   Book.find({}).then((books) => {
@@ -19,7 +20,15 @@ booksRouter.get('/:id', (req, res, next) => {
     .catch((error) => next(error))
 })
 
-booksRouter.post('/', (req, res, next) => {
+booksRouter.post('/', middleware.userExtractor, (req, res, next) => {
+  const user = req.user
+  if (!user) {
+    return res.status(401).json({ error: 'token missing or invalid' })
+  }
+  if (user.role !== 'admin') {
+    return res.status(403).json({ error: 'only admins can add books' })
+  }
+
   console.log(req.body)
   let body = req.body
   if (!body) {
@@ -38,15 +47,31 @@ booksRouter.post('/', (req, res, next) => {
     .catch((error) => next(error))
 })
 
-booksRouter.delete('/:id', (req, res, next) => {
+booksRouter.delete('/:id', middleware.userExtractor, (req, res, next) => {
+  const user = req.user
+  if (!user) {
+    return res.status(401).json({ error: 'token missing or invalid' })
+  }
+  if (user.role !== 'admin') {
+    return res.status(403).json({ error: 'only admins can delete books' })
+  }
+
   Book.findByIdAndDelete(req.params.id)
     .then((result) => {
-      res.json({ message: `deleted ${req.params.id}` }).status(204)
+      res.status(204).end()
     })
     .catch((error) => next(error))
 })
 
-booksRouter.put('/:id', (req, res, next) => {
+booksRouter.put('/:id', middleware.userExtractor, (req, res, next) => {
+  const user = req.user
+  if (!user) {
+    return res.status(401).json({ error: 'token missing or invalid' })
+  }
+  if (user.role !== 'admin') {
+    return res.status(403).json({ error: 'only admins can edit books' })
+  }
+
   const id = req.params.id
   const body = req.body
 
