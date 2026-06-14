@@ -8,6 +8,7 @@ const booksRouter = require('./controllers/books')
 const Book = require('./models/book')
 const usersRouter = require('./controllers/users')
 const loginRouter = require('./controllers/login')
+const borrowsRouter = require('./controllers/borrows')
 
 const app = express()
 app.use(cors())
@@ -42,6 +43,7 @@ app.get('/info', (req, res, next) => {
 app.use('/api/books', booksRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/login', loginRouter)
+app.use('/api/borrows', borrowsRouter)
 
 app.use(middleware.unknownEndpoint)
 app.use(middleware.errorHandler)
