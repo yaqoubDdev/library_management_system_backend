@@ -83,12 +83,12 @@ test('books are returned as json', async () => {
 
 test('all books are returned', async () => {
   const response = await api.get('/api/books')
-  assert.strictEqual(response.body.length, initialBooks.length)
+  assert.strictEqual(response.body.data.length, initialBooks.length)
 })
 
 test('a specific book is within the returned books', async () => {
   const response = await api.get('/api/books')
-  const titles = response.body.map(r => r.title)
+  const titles = response.body.data.map(r => r.title)
   assert(titles.includes('HTML is easy'))
 })
 
@@ -110,9 +110,9 @@ test('a valid book can be added by an admin', async () => {
     .expect('Content-Type', /application\/json/)
 
   const response = await api.get('/api/books')
-  const titles = response.body.map(r => r.title)
+  const titles = response.body.data.map(r => r.title)
 
-  assert.strictEqual(response.body.length, initialBooks.length + 1)
+  assert.strictEqual(response.body.data.length, initialBooks.length + 1)
   assert(titles.includes('Async/Await is awesome'))
 })
 
@@ -129,7 +129,7 @@ test('book without title is not added by admin', async () => {
     .expect(400)
 
   const response = await api.get('/api/books')
-  assert.strictEqual(response.body.length, initialBooks.length)
+  assert.strictEqual(response.body.data.length, initialBooks.length)
 })
 
 test('adding book fails with 401 if token is not provided', async () => {
@@ -161,7 +161,7 @@ test('adding book fails with 403 if user is not admin', async () => {
 
 test('an authenticated user can borrow a book successfully', async () => {
   const booksResponse = await api.get('/api/books')
-  const book = booksResponse.body[0]
+  const book = booksResponse.body.data[0]
   const initialCopies = book.copies
 
   const borrowResponse = await api
@@ -183,7 +183,7 @@ test('an authenticated user can borrow a book successfully', async () => {
 
 test('user cannot borrow the same book twice simultaneously', async () => {
   const booksResponse = await api.get('/api/books')
-  const book = booksResponse.body[0]
+  const book = booksResponse.body.data[0]
 
   // First borrow
   await api
@@ -200,7 +200,7 @@ test('user cannot borrow the same book twice simultaneously', async () => {
 
 test('user can return a borrowed book successfully', async () => {
   const booksResponse = await api.get('/api/books')
-  const book = booksResponse.body[0]
+  const book = booksResponse.body.data[0]
   const initialCopies = book.copies
 
   // Borrow
@@ -229,7 +229,7 @@ test('user can return a borrowed book successfully', async () => {
 
 test('user cannot return a book they have not borrowed', async () => {
   const booksResponse = await api.get('/api/books')
-  const book = booksResponse.body[0]
+  const book = booksResponse.body.data[0]
 
   await api
     .post(`/api/books/${book.id}/return`)

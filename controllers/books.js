@@ -3,10 +3,36 @@ const Book = require('../models/book')
 const middleware = require('../utils/middleware')
 const BorrowRecord = require('../models/borrowRecord')
 
-booksRouter.get('/', (req, res) => {
-  Book.find({}).then((books) => {
-    res.json(books)
-  })
+booksRouter.get('/', async (req, res, next) => {
+  try {
+    const { search, category, page, limit } = req.query
+    const pageNum = Math.max(parseInt(page) || 1, 1)
+    const limitNum = Math.min(Math.max(parseInt(limit) || 20, 1), 100)
+    const skip = (pageNum - 1) * limitNum
+
+    const filter = {}
+    if (search) {
+      const regex = new RegExp(search, 'i')
+      filter.$or = [{ title: regex }, { author: regex }]
+    }
+    if (category) {
+      filter.category = category
+    }
+
+    const [books, total] = await Promise.all([
+      Book.find(filter).skip(skip).limit(limitNum),
+      Book.countDocuments(filter)
+    ])
+
+    res.json({
+      data: books,
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum)
+    })
+  } catch (error) {
+    next(error)
+  }
 })
 
 booksRouter.get('/:id', (req, res, next) => {

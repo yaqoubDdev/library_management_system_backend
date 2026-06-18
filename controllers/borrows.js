@@ -2,13 +2,15 @@ const borrowsRouter = require('express').Router()
 const BorrowRecord = require('../models/borrowRecord')
 const middleware = require('../utils/middleware')
 
-// ─── ADMIN: Get all borrow records with optional search ───────────────────────
+// ─── ADMIN: Get all borrow records with optional search & pagination ──────────
 borrowsRouter.get('/', middleware.userExtractor, (req, res, next) => {
   const user = req.user
   if (!user) return res.status(401).json({ error: 'token missing or invalid' })
   if (user.role !== 'admin') return res.status(403).json({ error: 'admin access only' })
 
-  const { search, status } = req.query
+  const { search, status, page, limit } = req.query
+  const pageNum = Math.max(parseInt(page) || 1, 1)
+  const limitNum = Math.min(Math.max(parseInt(limit) || 20, 1), 100)
 
   BorrowRecord.find({})
     .populate('book', 'title author isbn')
@@ -39,30 +41,44 @@ borrowsRouter.get('/', middleware.userExtractor, (req, res, next) => {
         })
       }
 
-      res.json(filtered)
+      const total = filtered.length
+      const start = (pageNum - 1) * limitNum
+      const data = filtered.slice(start, start + limitNum)
+
+      res.json({ data, total, page: pageNum, pages: Math.ceil(total / limitNum) })
     })
     .catch((error) => next(error))
 })
 
-// ─── USER: Get own borrow records ─────────────────────────────────────────────
-borrowsRouter.get('/my', middleware.userExtractor, (req, res, next) => {
+// ─── USER: Get own borrow records (with pagination) ───────────────────────────
+borrowsRouter.get('/my', middleware.userExtractor, async (req, res, next) => {
   const user = req.user
   if (!user) return res.status(401).json({ error: 'token missing or invalid' })
 
-  const { status } = req.query
+  try {
+    const { status, page, limit } = req.query
+    const pageNum = Math.max(parseInt(page) || 1, 1)
+    const limitNum = Math.min(Math.max(parseInt(limit) || 20, 1), 100)
+    const skip = (pageNum - 1) * limitNum
 
-  const query = { user: user._id }
-  if (status && ['borrowed', 'returned'].includes(status)) {
-    query.status = status
+    const query = { user: user._id }
+    if (status && ['borrowed', 'returned'].includes(status)) {
+      query.status = status
+    }
+
+    const [records, total] = await Promise.all([
+      BorrowRecord.find(query)
+        .populate('book', 'title author isbn category copies')
+        .sort({ borrowedAt: -1 })
+        .skip(skip)
+        .limit(limitNum),
+      BorrowRecord.countDocuments(query)
+    ])
+
+    res.json({ data: records, total, page: pageNum, pages: Math.ceil(total / limitNum) })
+  } catch (error) {
+    next(error)
   }
-
-  BorrowRecord.find(query)
-    .populate('book', 'title author isbn category copies')
-    .sort({ borrowedAt: -1 })
-    .then((records) => {
-      res.json(records)
-    })
-    .catch((error) => next(error))
 })
 
 // ─── USER: Request extension on a borrow record ───────────────────────────────
@@ -156,20 +172,34 @@ borrowsRouter.post('/:id/deny-extension', middleware.userExtractor, (req, res, n
     .catch((error) => next(error))
 })
 
-// ─── ADMIN: Get borrow records for a specific user ────────────────────────────
-borrowsRouter.get('/user/:userId', middleware.userExtractor, (req, res, next) => {
+// ─── ADMIN: Get borrow records for a specific user (with pagination) ──────────
+borrowsRouter.get('/user/:userId', middleware.userExtractor, async (req, res, next) => {
   const user = req.user
   if (!user) return res.status(401).json({ error: 'token missing or invalid' })
   if (user.role !== 'admin') return res.status(403).json({ error: 'admin access only' })
 
-  BorrowRecord.find({ user: req.params.userId })
-    .populate('book', 'title author isbn category copies')
-    .populate('user', 'username name')
-    .sort({ borrowedAt: -1 })
-    .then((records) => {
-      res.json(records)
-    })
-    .catch((error) => next(error))
+  try {
+    const { page, limit } = req.query
+    const pageNum = Math.max(parseInt(page) || 1, 1)
+    const limitNum = Math.min(Math.max(parseInt(limit) || 20, 1), 100)
+    const skip = (pageNum - 1) * limitNum
+
+    const query = { user: req.params.userId }
+
+    const [records, total] = await Promise.all([
+      BorrowRecord.find(query)
+        .populate('book', 'title author isbn category copies')
+        .populate('user', 'username name')
+        .sort({ borrowedAt: -1 })
+        .skip(skip)
+        .limit(limitNum),
+      BorrowRecord.countDocuments(query)
+    ])
+
+    res.json({ data: records, total, page: pageNum, pages: Math.ceil(total / limitNum) })
+  } catch (error) {
+    next(error)
+  }
 })
 
 module.exports = borrowsRouter

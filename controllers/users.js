@@ -57,17 +57,33 @@ usersRouter.post('/', (req, res, next) => {
     .catch((error) => next(error))
 })
 
-// ─── ADMIN: Get all users ─────────────────────────────────────────────────────
-usersRouter.get('/', middleware.userExtractor, (req, res, next) => {
+// ─── ADMIN: Get all users (with pagination & search) ──────────────────────────
+usersRouter.get('/', middleware.userExtractor, async (req, res, next) => {
   const user = req.user
   if (!user) return res.status(401).json({ error: 'token missing or invalid' })
   if (user.role !== 'admin') return res.status(403).json({ error: 'admin access only' })
 
-  User.find({})
-    .then((users) => {
-      res.json(users)
-    })
-    .catch((error) => next(error))
+  try {
+    const { search, page, limit } = req.query
+    const pageNum = Math.max(parseInt(page) || 1, 1)
+    const limitNum = Math.min(Math.max(parseInt(limit) || 20, 1), 100)
+    const skip = (pageNum - 1) * limitNum
+
+    const filter = {}
+    if (search) {
+      const regex = new RegExp(search, 'i')
+      filter.$or = [{ username: regex }, { name: regex }]
+    }
+
+    const [users, total] = await Promise.all([
+      User.find(filter).skip(skip).limit(limitNum),
+      User.countDocuments(filter)
+    ])
+
+    res.json({ data: users, total, page: pageNum, pages: Math.ceil(total / limitNum) })
+  } catch (error) {
+    next(error)
+  }
 })
 
 // ─── ADMIN: Get a single user ─────────────────────────────────────────────────
