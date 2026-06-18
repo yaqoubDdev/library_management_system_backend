@@ -41,11 +41,21 @@ borrowsRouter.get('/', middleware.userExtractor, (req, res, next) => {
         })
       }
 
+      const now = new Date()
+      const stats = {
+        totalRecords: records.length,
+        totalBorrowed: records.filter(r => r.status === 'borrowed').length,
+        totalReturned: records.filter(r => r.status === 'returned').length,
+        totalOverdue: records.filter(r => r.status === 'borrowed' && new Date(r.dueDate) < now).length,
+        pendingExtensions: records.filter(r => r.extensionRequested && !r.extensionApproved).length,
+        totalFines: records.reduce((sum, r) => sum + (r.fineAmount || 0), 0)
+      }
+
       const total = filtered.length
       const start = (pageNum - 1) * limitNum
       const data = filtered.slice(start, start + limitNum)
 
-      res.json({ data, total, page: pageNum, pages: Math.ceil(total / limitNum) })
+      res.json({ data, total, page: pageNum, pages: Math.ceil(total / limitNum), stats })
     })
     .catch((error) => next(error))
 })
