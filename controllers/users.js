@@ -28,27 +28,21 @@ usersRouter.post('/', (req, res, next) => {
         })
       }
 
-      // Only allow admin role if no users exist yet (first-time bootstrap)
-      // Otherwise force regular user role on registration
-      User.countDocuments({})
-        .then((count) => {
-          const effectiveRole = count === 0 ? (role || 'admin') : 'user'
+      const saltRounds = 10
+      bcrypt.hash(password, saltRounds)
+        .then((passwordHash) => {
+          const effectiveRole = ['admin', 'user'].includes(role) ? role : 'user'
 
-          const saltRounds = 10
-          bcrypt.hash(password, saltRounds)
-            .then((passwordHash) => {
-              const user = new User({
-                username,
-                name,
-                passwordHash,
-                role: effectiveRole
-              })
+          const user = new User({
+            username,
+            name,
+            passwordHash,
+            role: effectiveRole
+          })
 
-              user.save()
-                .then((savedUser) => {
-                  res.status(201).json(savedUser)
-                })
-                .catch((error) => next(error))
+          user.save()
+            .then((savedUser) => {
+              res.status(201).json(savedUser)
             })
             .catch((error) => next(error))
         })
