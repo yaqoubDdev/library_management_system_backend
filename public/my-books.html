@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Borrowed Books — LibraSys</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/books.css">
+  <style>
+    .my-books-page { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; }
+    .my-books-page h1 { margin-bottom: 1.5rem; }
+    .my-books-page h1 span { color: var(--gold); }
+
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .filter-bar label { color: var(--gray); font-size: 0.9rem; }
+    .filter-bar input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--gold); cursor: pointer; }
+
+    .borrow-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.4rem 1.8rem;
+      margin-bottom: 1.2rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1rem;
+      align-items: center;
+      border-left: 5px solid var(--gold);
+      transition: transform 0.2s;
+    }
+    .borrow-card:hover { transform: translateY(-2px); }
+    .borrow-card.overdue { border-left-color: var(--danger); }
+    .borrow-card.returned { border-left-color: var(--gray); opacity: 0.8; }
+
+    .borrow-card .book-title { font-size: 1.1rem; font-weight: 600; color: var(--navy); }
+    .borrow-card .book-meta { font-size: 0.88rem; color: var(--gray); margin-top: 0.3rem; }
+    .borrow-card .dates { font-size: 0.88rem; margin-top: 0.6rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .borrow-card .dates span { display: flex; align-items: center; gap: 0.3rem; }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .badge-borrowed { background: #e8f4fd; color: #1a6fb5; }
+    .badge-returned { background: #e8f8ef; color: #1a7a3a; }
+    .badge-overdue  { background: #fdecea; color: var(--danger); }
+    .badge-fine     { background: #fff3e0; color: #b85c00; }
+    .badge-ext-requested { background: #f3e8ff; color: #7c3aed; }
+    .badge-ext-approved  { background: #e8f4fd; color: #0d7a1a; }
+
+    .actions-col { display: flex; flex-direction: column; gap: 0.6rem; align-items: flex-end; }
+
+    .empty-state { text-align: center; padding: 3rem; color: var(--gray); }
+    .empty-state p { font-size: 1.1rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">Libra<span>Sys</span></div>
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    <ul class="nav-links" id="navLinks"></ul>
+  </nav>
+
+  <div class="my-books-page">
+    <h1>My <span>Borrowed Books</span></h1>
+
+    <div class="filter-bar">
+      <label>
+        <input type="checkbox" id="showReturned"> Show returned books
+      </label>
+    </div>
+
+    <div id="globalMessage" class="message" style="display:none; margin-bottom:1rem;"></div>
+    <div id="booksContainer"><div class="spinner-container"><div class="spinner"></div></div></div>
+  </div>
+
+  <footer><p>&copy; 2026 LibraSys. All rights reserved.</p></footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    (function () {
+      const token = localStorage.getItem('token')
+      if (!token) { window.location.href = 'login.html'; return; }
+
+      let allRecords = []
+
+      function formatDate(dateStr) {
+        if (!dateStr) return 'N/A'
+        return new Date(dateStr).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+      }
+
+      function isOverdue(record) {
+        return record.status === 'borrowed' && new Date() > new Date(record.dueDate)
+      }
+
+      function showGlobalMsg(text, type) {
+        const el = document.getElementById('globalMessage')
+        el.textContent = text
+        el.className = 'message ' + type
+        el.style.display = 'block'
+        setTimeout(() => el.style.display = 'none', 4000)
+      }
+
+      function renderRecords(records) {
+        const container = document.getElementById('booksContainer')
+        if (records.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <p>No books to display.</p>
+            </div>`
+          return
+        }
+
+        container.innerHTML = records.map(r => {
+          const overdue = isOverdue(r)
+          const cardClass = r.status === 'returned' ? 'returned' : overdue ? 'overdue' : ''
+
+          let badges = ''
+          if (r.status === 'returned') badges += `<span class="badge badge-returned">Returned</span> `
+          else if (overdue) badges += `<span class="badge badge-overdue">Overdue</span> `
+          else badges += `<span class="badge badge-borrowed">Borrowed</span> `
+
+          if (r.fineAmount > 0) badges += `<span class="badge badge-fine">Fine: SLL ${r.fineAmount}</span> `
+          if (r.extensionRequested && !r.extensionApproved) badges += `<span class="badge badge-ext-requested">Extension Pending</span> `
+          if (r.extensionApproved) badges += `<span class="badge badge-ext-approved">Extension Approved (+${r.extensionDays} days)</span> `
+
+          let actionBtns = ''
+          // Return button — for any borrowed book
+          if (r.status === 'borrowed') {
+            actionBtns += `<button class="btn btn-primary" style="font-size:0.82rem;padding:0.4rem 1rem;margin-bottom:0.4rem;" onclick="returnBook('${r.id}','${r.book?.id}')">&#8617; Return Book</button>`
+          }
+          // Extension request button — only if still borrowed, not overdue, not already requested
+          if (r.status === 'borrowed' && !overdue && !r.extensionRequested) {
+            actionBtns += `<button class="btn btn-secondary" style="font-size:0.82rem;padding:0.4rem 1rem;" onclick="requestExtension('${r.id}')">Request Extension</button>`
+          }
+
+          return `
+            <div class="borrow-card ${cardClass}">
+              <div>
+                <div class="book-title">${r.book?.title || 'Unknown Book'}</div>
+                <div class="book-meta">by ${r.book?.author || 'Unknown'} &nbsp;|&nbsp; ISBN: ${r.book?.isbn || 'N/A'}</div>
+                <div style="margin-top:0.6rem;">${badges}</div>
+                <div class="dates">
+                  <span>📅 Borrowed: ${formatDate(r.borrowedAt)}</span>
+                  <span>⏰ Due: <strong style="color:${overdue ? 'var(--danger)' : 'inherit'}">${formatDate(r.dueDate)}</strong></span>
+                  ${r.status === 'returned' ? `<span>✅ Returned: ${formatDate(r.returnedAt)}</span>` : ''}
+                </div>
+                ${r.fineAmount > 0 ? `<p style="color:var(--danger);font-size:0.88rem;margin-top:0.5rem;">⚠ A fine of <strong>SLL ${r.fineAmount}</strong> has been applied for returning ${Math.ceil((new Date(r.returnedAt || new Date()) - new Date(r.dueDate)) / 86400000)} day(s) late.</p>` : ''}
+              </div>
+              <div class="actions-col">${actionBtns}</div>
+            </div>`
+        }).join('')
+      }
+
+      async function loadRecords() {
+        const showReturned = document.getElementById('showReturned').checked
+        const status = showReturned ? '' : 'borrowed'
+        try {
+          const query = status ? `?status=${status}` : ''
+          const res = await apiFetch(`/borrows/my${query}`)
+          allRecords = res.data
+          renderRecords(allRecords)
+        } catch (err) {
+          document.getElementById('booksContainer').innerHTML =
+            `<p style="color:var(--danger);text-align:center;">${err.message}</p>`
+        }
+      }
+
+      window.returnBook = async function (recordId, bookId) {
+        if (!confirm('Return this book?')) return
+        try {
+          const res = await apiFetch(`/books/${bookId}/return`, { method: 'POST' })
+          showGlobalMsg(res.message, 'success')
+          loadRecords()
+        } catch (err) {
+          showGlobalMsg(err.message, 'error')
+        }
+      }
+
+      window.requestExtension = async function (id) {
+        try {
+          const res = await apiFetch(`/borrows/${id}/request-extension`, { method: 'POST' })
+          showGlobalMsg(res.message, 'success')
+          loadRecords()
+        } catch (err) {
+          showGlobalMsg(err.message, 'error')
+        }
+      }
+
+      document.getElementById('showReturned').addEventListener('change', loadRecords)
+      loadRecords()
+    })()
+  </script>
+</body>
+</html>

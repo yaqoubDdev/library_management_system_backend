@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Borrow Records — LibraSys Admin</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/books.css">
+  <style>
+    .records-page { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; }
+    .records-page h1 { margin-bottom: 1.5rem; }
+    .records-page h1 span { color: var(--gold); }
+
+    .search-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .search-bar input {
+      flex: 1;
+      min-width: 220px;
+      padding: 0.6rem 1rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-bar input:focus { border-color: var(--gold); }
+    .search-bar select {
+      padding: 0.6rem 1rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: white;
+      cursor: pointer;
+    }
+
+    .admin-table { width: 100%; border-collapse: collapse; background: white; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    .admin-table thead { background: var(--navy); color: white; }
+    .admin-table th, .admin-table td { padding: 0.85rem 1.1rem; text-align: left; font-size: 0.9rem; }
+    .admin-table tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+    .admin-table tbody tr:hover { background: #f9f9fd; }
+    .admin-table tbody tr:last-child { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.7rem;
+      border-radius: 20px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-borrowed { background: #e8f4fd; color: #1a6fb5; }
+    .badge-returned { background: #e8f8ef; color: #1a7a3a; }
+    .badge-overdue  { background: #fdecea; color: var(--danger); }
+    .badge-fine     { background: #fff3e0; color: #b85c00; }
+    .badge-ext-pending  { background: #f3e8ff; color: #7c3aed; }
+    .badge-ext-approved { background: #e8f4fd; color: #0d7a1a; }
+
+    .ext-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .btn-xs { padding: 0.25rem 0.7rem; font-size: 0.78rem; border-radius: 5px; }
+    .summary-bar {
+      display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .summary-card {
+      background: white; border-radius: 10px; padding: 1rem 1.5rem;
+      box-shadow: var(--shadow); text-align: center; min-width: 120px;
+    }
+    .summary-card .val { font-size: 1.8rem; font-weight: 700; color: var(--navy); }
+    .summary-card .lbl { font-size: 0.8rem; color: var(--gray); margin-top: 0.2rem; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">Libra<span>Sys</span></div>
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    <ul class="nav-links" id="navLinks"></ul>
+  </nav>
+
+    <div class="records-page">
+    <h1>Borrow <span>Records</span></h1>
+    <div id="userFilterBanner" style="display:none; margin-bottom:1rem; padding:0.6rem 1rem; background:#f3e8ff; border-radius:8px; font-size:0.9rem;"></div>
+
+    <div class="summary-bar" id="summaryBar"></div>
+
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search by user, book title or ISBN...">
+      <select id="statusFilter">
+        <option value="">All Statuses</option>
+        <option value="borrowed">Borrowed</option>
+        <option value="returned">Returned</option>
+      </select>
+    </div>
+
+    <div id="globalMessage" class="message" style="display:none; margin-bottom:1rem;"></div>
+    <div id="tableWrapper"><div class="spinner-container"><div class="spinner"></div></div></div>
+  </div>
+
+  <footer><p>&copy; 2026 LibraSys. All rights reserved.</p></footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    (function () {
+      const token = localStorage.getItem('token')
+      const role = localStorage.getItem('role')
+      if (!token || role !== 'admin') { window.location.href = 'login.html'; return; }
+
+      let currentPage = 1
+      let currentSearch = ''
+      let currentStatus = ''
+      let totalPages = 1
+      let currentTotal = 0
+      const perPage = 15
+
+      function formatDate(dateStr) {
+        if (!dateStr) return '—'
+        return new Date(dateStr).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+      }
+
+      function isOverdue(r) {
+        return r.status === 'borrowed' && new Date() > new Date(r.dueDate)
+      }
+
+      function showGlobalMsg(text, type) {
+        const el = document.getElementById('globalMessage')
+        el.textContent = text
+        el.className = 'message ' + type
+        el.style.display = 'block'
+        setTimeout(() => el.style.display = 'none', 4000)
+      }
+
+      function renderTable(records) {
+        const wrapper = document.getElementById('tableWrapper')
+        if (records.length === 0) {
+          wrapper.innerHTML = `<p style="text-align:center;color:var(--gray);padding:2rem;">No records found.</p>`
+          return
+        }
+
+        const rows = records.map(r => {
+          const overdue = isOverdue(r)
+
+          let statusBadge = ''
+          if (r.status === 'returned') statusBadge = `<span class="badge badge-returned">Returned</span>`
+          else if (overdue) statusBadge = `<span class="badge badge-overdue">Overdue</span>`
+          else statusBadge = `<span class="badge badge-borrowed">Borrowed</span>`
+
+          let fineBadge = r.fineAmount > 0 ? `<br><span class="badge badge-fine">Fine: SLL ${r.fineAmount}</span>` : ''
+
+          let extBadge = ''
+          if (r.extensionRequested && !r.extensionApproved) extBadge = `<br><span class="badge badge-ext-pending">Ext. Pending</span>`
+          else if (r.extensionApproved) extBadge = `<br><span class="badge badge-ext-approved">Ext. +${r.extensionDays}d</span>`
+
+          let extActions = ''
+          if (r.extensionRequested && !r.extensionApproved && r.status === 'borrowed') {
+            extActions = `
+              <div class="ext-actions">
+                <button class="btn btn-primary btn-xs" onclick="approveExtension('${r.id}', 7)">Approve +7d</button>
+                <button class="btn btn-danger btn-xs" onclick="denyExtension('${r.id}')">Deny</button>
+              </div>`
+          }
+
+          return `
+            <tr>
+              <td><strong>${r.book?.title || '—'}</strong><br><small style="color:var(--gray);">ISBN: ${r.book?.isbn || 'N/A'}</small></td>
+              <td>${r.user?.name || r.user?.username || '—'}<br><small style="color:var(--gray);">@${r.user?.username || ''}</small></td>
+              <td>${formatDate(r.borrowedAt)}</td>
+              <td style="color:${overdue ? 'var(--danger)' : 'inherit'}"><strong>${formatDate(r.dueDate)}</strong></td>
+              <td>${r.status === 'returned' ? formatDate(r.returnedAt) : '—'}</td>
+              <td>${statusBadge}${fineBadge}${extBadge}</td>
+              <td>${extActions}</td>
+            </tr>`
+        }).join('')
+
+        wrapper.innerHTML = `
+          <div class="admin-table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Book</th><th>Borrower</th><th>Borrowed</th><th>Due Date</th><th>Returned</th><th>Status</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+
+          <div id="borrowPagination" style="display:flex;justify-content:center;align-items:center;gap:0.5rem;margin-top:1rem;">
+            <button class="btn btn-secondary btn-xs" id="prevPage" onclick="goToPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>‹ Prev</button>
+            <span style="font-size:0.9rem;color:var(--gray);padding:0 0.8rem;">Page ${currentPage} of ${totalPages} (${currentTotal} total)</span>
+            <button class="btn btn-secondary btn-xs" id="nextPage" onclick="goToPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>Next ›</button>
+          </div>`
+      }
+
+      function renderPagination() {
+        const nav = document.getElementById('borrowPagination')
+        if (!nav) return
+        nav.querySelector('#prevPage').disabled = currentPage <= 1
+        nav.querySelector('#nextPage').disabled = currentPage >= totalPages
+        nav.querySelector('span').textContent = `Page ${currentPage} of ${totalPages} (${currentTotal} total)`
+      }
+
+      async function loadRecords(page = 1) {
+        try {
+          const urlParams = new URLSearchParams(window.location.search)
+          const userId = urlParams.get('userId')
+
+          if (userId) {
+            document.getElementById('searchInput').closest('.search-bar').style.display = 'none'
+            document.getElementById('summaryBar').style.display = 'none'
+            const banner = document.getElementById('userFilterBanner')
+            banner.style.display = 'block'
+            const userRes = await apiFetch(`/users/${userId}`)
+            banner.innerHTML = `Showing borrows for <strong>${userRes.name || userRes.username}</strong> (@${userRes.username}) &nbsp; <a href="borrow-records.html" style="color:var(--navy);font-weight:500;">Show all records</a>`
+
+            const res = await apiFetch(`/borrows/user/${userId}?page=${page}&limit=${perPage}`)
+            currentPage = res.page
+            totalPages = res.pages
+            currentTotal = res.total
+            renderTable(res.data)
+          } else {
+            const params = new URLSearchParams()
+            if (page > 1) params.set('page', page)
+            if (perPage !== 20) params.set('limit', perPage)
+            if (currentSearch) params.set('search', currentSearch)
+            if (currentStatus) params.set('status', currentStatus)
+
+            const qs = params.toString()
+            const res = await apiFetch(`/borrows${qs ? '?' + qs : ''}`)
+            currentPage = res.page
+            totalPages = res.pages
+            currentTotal = res.total
+            renderTable(res.data)
+
+            // Update summary using stats from API
+            const s = res.stats
+            document.getElementById('summaryBar').innerHTML = `
+              <div class="summary-card"><div class="val">${s.totalRecords}</div><div class="lbl">Total Records</div></div>
+              <div class="summary-card"><div class="val" style="color:#1a6fb5;">${s.totalBorrowed}</div><div class="lbl">Borrowed</div></div>
+              <div class="summary-card"><div class="val" style="color:#1a7a3a;">${s.totalReturned}</div><div class="lbl">Returned</div></div>
+              <div class="summary-card"><div class="val" style="color:var(--danger);">${s.totalOverdue}</div><div class="lbl">Overdue</div></div>
+              <div class="summary-card"><div class="val" style="color:#7c3aed;">${s.pendingExtensions}</div><div class="lbl">Ext. Requests</div></div>
+              <div class="summary-card"><div class="val" style="color:#b85c00;">SLL ${s.totalFines}</div><div class="lbl">Total Fines</div></div>
+            `
+          }
+        } catch (err) {
+          document.getElementById('tableWrapper').innerHTML =
+            `<p style="color:var(--danger);text-align:center;">${err.message}</p>`
+        }
+      }
+
+      window.goToPage = function (page) {
+        if (page < 1 || page > totalPages) return
+        currentPage = page
+        loadRecords(page)
+      }
+
+      function onFilterChange() {
+        currentSearch = document.getElementById('searchInput').value.trim()
+        currentStatus = document.getElementById('statusFilter').value
+        currentPage = 1
+        loadRecords(1)
+      }
+
+      window.approveExtension = async function (id, days) {
+        try {
+          const res = await apiFetch(`/borrows/${id}/approve-extension`, {
+            method: 'POST',
+            body: JSON.stringify({ days })
+          })
+          showGlobalMsg(res.message, 'success')
+          loadRecords()
+        } catch (err) { showGlobalMsg(err.message, 'error') }
+      }
+
+      window.denyExtension = async function (id) {
+        try {
+          const res = await apiFetch(`/borrows/${id}/deny-extension`, { method: 'POST' })
+          showGlobalMsg(res.message, 'success')
+          loadRecords()
+        } catch (err) { showGlobalMsg(err.message, 'error') }
+      }
+
+      document.getElementById('searchInput').addEventListener('input', debounce(onFilterChange, 300))
+      document.getElementById('statusFilter').addEventListener('change', onFilterChange)
+      loadRecords()
+
+      function debounce(fn, ms) {
+        let timer
+        return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms) }
+      }
+    })()
+  </script>
+</body>
+</html>

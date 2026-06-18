@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LibraSys — Library Management System</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/books.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">Libra<span>Sys</span></div>
+    <div class="hamburger" id="hamburger">
+      <span></span><span></span><span></span>
+    </div>
+    <ul class="nav-links" id="navLinks"></ul>
+  </nav>
+
+  <section class="hero">
+    <h1>Welcome to <span>LibraSys</span></h1>
+    <p>Your modern library management solution. Browse and manage books with ease.</p>
+    <a href="books.html" class="btn-hero">Explore Books</a>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">Featured Books</h2>
+    <div id="featuredBooks" class="books-grid">
+      <div class="spinner-container"><div class="spinner"></div></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2026 LibraSys. All rights reserved.</p>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    async function loadFeatured() {
+      try {
+        const res = await apiFetch("/books");
+        const books = res.data || res;
+        const container = document.getElementById("featuredBooks");
+        container.innerHTML = books.slice(0, 6).map(book => `
+          <div class="book-card">
+            <img src="${bookCover(book.title, book.author)}" alt="${book.title}">
+            <div class="card-body">
+              <h3>${book.title}</h3>
+              <p>${book.author || ""}</p>
+              <a href="book-details.html?id=${book.id || book._id}" class="btn">View Details</a>
+            </div>
+          </div>
+        `).join("");
+      } catch {
+        document.getElementById("featuredBooks").innerHTML = "<p style='text-align:center;color:var(--gray);'>Could not load books.</p>";
+      }
+    }
+    loadFeatured();
+  </script>
+</body>
+</html>

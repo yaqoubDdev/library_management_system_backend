@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — LibraSys</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/books.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">Libra<span>Sys</span></div>
+    <div class="hamburger" id="hamburger">
+      <span></span><span></span><span></span>
+    </div>
+    <ul class="nav-links" id="navLinks"></ul>
+  </nav>
+
+  <div class="admin-books-page">
+    <h1>Admin — <span>Manage Books</span></h1>
+    <a href="add-book.html" class="btn btn-primary add-btn">+ Add New Book</a>
+    <div id="adminMessage" class="message"></div>
+    <div class="admin-table-wrapper">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Category</th>
+            <th>Copies</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="adminBooksBody">
+          <tr><td colspan="5" style="text-align:center;padding:2rem;">
+            <div class="spinner-container"><div class="spinner"></div></div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 LibraSys. All rights reserved.</p>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

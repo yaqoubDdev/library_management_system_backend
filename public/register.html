@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — LibraSys</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/books.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">Libra<span>Sys</span></div>
+    <div class="hamburger" id="hamburger">
+      <span></span><span></span><span></span>
+    </div>
+    <ul class="nav-links" id="navLinks"></ul>
+  </nav>
+
+  <div class="form-page">
+    <h1>Register with <span>LibraSys</span></h1>
+    <div class="form-card">
+      <div id="registerMessage" class="message"></div>
+      <form id="registerForm" novalidate>
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" placeholder="Enter your full name">
+        </div>
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" required placeholder="Enter username (min 3 chars)">
+          <div class="field-error" id="usernameError">Username is required.</div>
+          <div class="field-error" id="usernameLengthError">Username must be at least 3 characters.</div>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" required placeholder="Enter password (min 3 chars)">
+          <div class="field-error" id="passwordError">Password is required.</div>
+          <div class="field-error" id="passwordLengthError">Password must be at least 3 characters.</div>
+        </div>
+        <div class="form-group">
+          <label for="role">Role</label>
+          <select id="role">
+            <option value="user">Regular User</option>
+            <option value="admin">Administrator</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary" id="registerBtn">Register</button>
+      </form>
+      <p style="margin-top: 1.5rem; text-align: center; color: var(--gray);">
+        Already have an account? <a href="login.html" style="color: var(--gold); font-weight: 500;">Login here</a>
+      </p>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 LibraSys. All rights reserved.</p>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const messageEl = document.getElementById("registerMessage");
+      messageEl.style.display = "none";
+
+      const name = document.getElementById("name").value.trim();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      const role = document.getElementById("role").value;
+
+      let valid = true;
+      document.querySelectorAll(".field-error").forEach((el) => (el.style.display = "none"));
+
+      if (!username) {
+        document.getElementById("usernameError").style.display = "block";
+        valid = false;
+      } else if (username.length < 3) {
+        document.getElementById("usernameLengthError").style.display = "block";
+        valid = false;
+      }
+
+      if (!password) {
+        document.getElementById("passwordError").style.display = "block";
+        valid = false;
+      } else if (password.length < 3) {
+        document.getElementById("passwordLengthError").style.display = "block";
+        valid = false;
+      }
+
+      if (!valid) return;
+
+      const btn = document.getElementById("registerBtn");
+      btn.disabled = true;
+      btn.textContent = "Registering...";
+
+      try {
+        await apiFetch("/users", {
+          method: "POST",
+          body: JSON.stringify({ name, username, password, role }),
+        });
+
+        messageEl.textContent = "Registration successful! Redirecting to login...";
+        messageEl.className = "message success";
+        messageEl.style.display = "block";
+
+        setTimeout(() => {
+          window.location.href = "login.html";
+        }, 1500);
+      } catch (err) {
+        messageEl.textContent = err.message;
+        messageEl.className = "message error";
+        messageEl.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Register";
+      }
+    });
+  </script>
+</body>
+</html>
